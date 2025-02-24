@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ultimate File Converter</title>
+    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/browser-image-compression@2.0.0/dist/browser-image-compression.min.js"></script>
+    <link rel="stylesheet" href="assets/style.css">
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5721788035694701" crossorigin="anonymous"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>File Converter</h1>
+        
+        <nav class="tool-nav">
+            <button class="tool-btn active" data-tool="pdf">PDF Tools</button>
+            <button class="tool-btn" data-tool="image">Image Tools</button>
+            <button class="tool-btn" data-tool="merge">Merge PDFs</button>
+        </nav>
+
+        <!-- PDF Tools -->
+        <section class="tool-section active" id="pdfTool">
+            <div class="drop-zone" id="pdfDropZone">
+                <input type="file" id="pdfInput" accept=".pdf" hidden>
+                <p>Drag & drop PDF files</p>
+            </div>
+            <button class="action-btn" onclick="splitPDF()">Split PDF</button>
+        </section>
+
+        <!-- Image Tools -->
+        <section class="tool-section" id="imageTool">
+            <div class="drop-zone" id="imageDropZone">
+                <input type="file" id="imageInput" accept="image/*" hidden>
+                <p>Drag & drop images</p>
+            </div>
+            <button class="action-btn" onclick="compressImage()">Compress Image</button>
+        </section>
+
+        <!-- Merge PDFs -->
+        <section class="tool-section" id="mergeTool">
+            <div class="drop-zone" id="mergeDropZone">
+                <input type="file" id="mergeInput" multiple accept=".pdf" hidden>
+                <p>Drag & drop multiple PDFs</p>
+            </div>
+            <button class="action-btn" onclick="mergePDFs()">Merge PDFs</button>
+        </section>
+
+        <div id="loading">Processing...</div>
+    </div>
+
+    <script>
+        // PDF Merging
+        async function mergePDFs() {
+            const files = document.getElementById('mergeInput').files;
+            if (files.length < 2) return alert('Select at least 2 PDFs');
+            
+            showLoading(true);
+            try {
+                const mergedPdf = await PDFLib.PDFDocument.create();
+                
+                for (const file of files) {
+                    const arrayBuffer = await file.arrayBuffer();
+                    const pdfDoc = await PDFLib.PDFDocument.load(arrayBuffer);
+                    const pages = await mergedPdf.copyPages(pdfDoc, pdfDoc.getPageIndices());
+                    pages.forEach(page => mergedPdf.addPage(page));
+                }
+
+                const pdfBytes = await mergedPdf.save();
+                downloadFile(pdfBytes, 'merged.pdf', 'application/pdf');
+            } catch (error) {
+                alert(error.message);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // Image Compression
+        async function compressImage() {
+            const file = document.getElementById('imageInput').files[0];
+            if (!file) return alert('Select an image');
+            
+            showLoading(true);
+            try {
+                const options = {
+                    maxSizeMB: 1,
+                    maxWidthOrHeight: 1920,
+                    useWebWorker: true
+                };
+                
+                const compressedFile = await imageCompression(file, options);
+                downloadFile(compressedFile, 'compressed.jpg', 'image/jpeg');
+            } catch (error) {
+                alert(error.message);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // Utilities
+        function downloadFile(data, fileName, type) {
+            const blob = new Blob([data], { type });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function showLoading(show) {
+            document.getElementById('loading').style.display = show ? 'block' : 'none';
+        }
+
+        // Initialize UI
+        document.querySelectorAll('.tool-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.tool-btn, .tool-section').forEach(el => {
+                    el.classList.remove('active');
+                });
+                btn.classList.add('active');
+                document.getElementById(`${btn.dataset.tool}Tool`).classList.add('active');
+            });
+        });
+
+        // Initialize AdSense
+        (adsbygoogle = window.adsbygoogle || []).push({});
+    </script>
+</body>
+</html>
